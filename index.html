@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <!-- Wird durch `--base-href` ersetzt, wenn die App nicht im Stammverzeichnis liegt. -->
+  <base href="/sanbase-check-app/">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="SanBase Check: Materialprüfung nach Checklisten, offline, die Daten bleiben auf dem Gerät.">
+  <meta name="theme-color" content="#00A68B">
+
+  <!-- iOS: als App vom Home-Bildschirm starten -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Check">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <title>SanBase Check</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body { margin: 0; height: 100%; background: #ffffff; }
+    @media (prefers-color-scheme: dark) { html, body { background: #121212; } }
+    #laden {
+      position: fixed; inset: 0; display: flex; align-items: center;
+      justify-content: center; font: 16px system-ui, sans-serif; color: #888;
+    }
+    .sb-hinweis {
+      position: fixed; left: 12px; right: 12px; z-index: 10000;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      display: flex; gap: 12px; align-items: center; padding: 12px 16px;
+      border-radius: 10px; background: #323232; color: #fff;
+      font: 15px system-ui, sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    }
+    .sb-hinweis span { flex: 1; }
+    .sb-hinweis button {
+      border: 0; border-radius: 6px; padding: 8px 12px; cursor: pointer;
+      font: 600 15px system-ui, sans-serif; background: #00A68B; color: #fff;
+    }
+    .sb-hinweis button.leise { background: transparent; color: #ccc; }
+  </style>
+</head>
+<body>
+  <div id="laden">SanBase Check wird geladen …</div>
+
+  <script>
+    (function () {
+      function hinweis(text, knopf, aktion, merkenAls) {
+        var div = document.createElement('div');
+        div.className = 'sb-hinweis';
+        var span = document.createElement('span');
+        span.textContent = text;
+        div.appendChild(span);
+        if (knopf) {
+          var b = document.createElement('button');
+          b.textContent = knopf;
+          b.onclick = function () { aktion(); div.remove(); };
+          div.appendChild(b);
+        }
+        var x = document.createElement('button');
+        x.className = 'leise';
+        x.textContent = '✕';
+        x.title = 'Schließen';
+        x.onclick = function () {
+          div.remove();
+          if (merkenAls) { try { localStorage.setItem(merkenAls, '1'); } catch (e) {} }
+        };
+        div.appendChild(x);
+        document.body.appendChild(div);
+      }
+
+      // Daten im Browser nicht automatisch löschen lassen.
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(function () {});
+      }
+
+      // iOS: Nur als App vom Home-Bildschirm bleiben die Daten dauerhaft erhalten.
+      var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+        (navigator.userAgent.indexOf('Macintosh') >= 0 && navigator.maxTouchPoints > 1);
+      var installiert = window.navigator.standalone === true ||
+        window.matchMedia('(display-mode: standalone)').matches;
+      var ausgeblendet = false;
+      try { ausgeblendet = localStorage.getItem('sbcheck_ios_hinweis') === '1'; } catch (e) {}
+      if (ios && !installiert && !ausgeblendet) {
+        window.addEventListener('load', function () {
+          hinweis('Für die Offline-Nutzung in Safari „Teilen“ → „Zum Home-Bildschirm“ ' +
+            'wählen und SanBase Check von dort starten. Sonst kann Safari die Daten löschen.',
+            null, null, 'sbcheck_ios_hinweis');
+        });
+      }
+
+      // Offline-Betrieb und Updates (sw.js wird von tool/release.ps1 befüllt).
+      if ('serviceWorker' in navigator) {
+        var neuLaden = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (neuLaden) location.reload();
+        });
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').then(function (reg) {
+            function updateAnbieten(sw) {
+              hinweis('Eine neue Version von SanBase Check ist verfügbar.', 'Neu laden', function () {
+                neuLaden = true;
+                sw.postMessage('aktivieren');
+              });
+            }
+            if (reg.waiting && navigator.serviceWorker.controller) updateAnbieten(reg.waiting);
+            reg.addEventListener('updatefound', function () {
+              var sw = reg.installing;
+              sw.addEventListener('statechange', function () {
+                if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                  updateAnbieten(sw);
+                }
+              });
+            });
+            // Lange geöffnete App: stündlich nach Updates sehen.
+            setInterval(function () { reg.update().catch(function () {}); }, 60 * 60 * 1000);
+          }).catch(function () {});
+        });
+      }
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
