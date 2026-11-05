@@ -47,6 +47,15 @@
 
   <script>
     (function () {
+      // Farbe der Statusleiste vom letzten Start (Kopfzeile der Check-DB),
+      // damit nicht erst das Standard-Grün erscheint.
+      try {
+        var farbe = localStorage.getItem('sanbase_check_themafarbe');
+        if (/^#[0-9a-fA-F]{6}$/.test(farbe || '')) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', farbe);
+        }
+      } catch (e) {}
+
       function hinweis(text, knopf, aktion, merkenAls) {
         var div = document.createElement('div');
         div.className = 'sb-hinweis';
