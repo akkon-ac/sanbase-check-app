@@ -5,7 +5,9 @@
   <base href="/sanbase-check-app/">
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- maximum-scale=1: iOS zoomt sonst beim Antippen eines Felds mit
+       kleiner Schrift hinein (die App hat eine eigene Größeneinstellung). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="description" content="SanBase Check: Materialprüfung nach Checklisten, offline, die Daten bleiben auf dem Gerät.">
   <meta name="theme-color" content="#00A68B">
 
@@ -54,6 +56,21 @@
         if (/^#[0-9a-fA-F]{6}$/.test(farbe || '')) {
           document.querySelector('meta[name="theme-color"]').setAttribute('content', farbe);
         }
+      } catch (e) {}
+
+      // iOS zoomt beim Antippen von Feldern mit kleiner Schrift hinein
+      // (Bemerkung). Flutter ersetzt den Viewport-Tag beim Start; daher
+      // maximum-scale=1 jedes Mal wieder setzen.
+      var VIEWPORT = 'width=device-width, initial-scale=1, maximum-scale=1, ' +
+        'viewport-fit=cover';
+      function viewportFest() {
+        document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+          if (m.getAttribute('content') !== VIEWPORT) m.setAttribute('content', VIEWPORT);
+        });
+      }
+      try {
+        new MutationObserver(viewportFest).observe(document.head,
+          { childList: true, subtree: true, attributes: true, attributeFilter: ['content'] });
       } catch (e) {}
 
       function hinweis(text, knopf, aktion, merkenAls) {
@@ -125,6 +142,18 @@
             });
             // Lange geöffnete App: stündlich nach Updates sehen.
             setInterval(function () { reg.update().catch(function () {}); }, 60 * 60 * 1000);
+            // Von Hand nach einem Update sehen (Einstellungen der App):
+            // 'neu' (Hinweis „Neu laden“ erscheint) oder 'aktuell'.
+            window.sanbaseUpdatePruefen = function () {
+              return reg.update().then(function () {
+                var sw = reg.waiting || reg.installing;
+                if (!sw) return 'aktuell';
+                if (reg.waiting && navigator.serviceWorker.controller) {
+                  updateAnbieten(reg.waiting);
+                }
+                return 'neu';
+              }).catch(function () { return 'nicht'; });
+            };
           }).catch(function () {});
         });
       }
