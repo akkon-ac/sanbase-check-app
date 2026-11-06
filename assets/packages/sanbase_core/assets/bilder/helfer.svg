@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 130">
+  <!-- Kleiner Roboter mit Kuppelkopf -->
+  <ellipse cx="50" cy="125" rx="42" ry="4" fill="#000" opacity="0.15"/>
+  <path d="M8 50 L20 50 L22 110 L30 122 L4 122 L10 110 Z" fill="#E8EEF5" stroke="#5B6B80" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M92 50 L80 50 L78 110 L70 122 L96 122 L90 110 Z" fill="#E8EEF5" stroke="#5B6B80" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="11" y="56" width="7" height="30" rx="2" fill="#2F6FD1"/>
+  <rect x="82" y="56" width="7" height="30" rx="2" fill="#2F6FD1"/>
+  <rect x="20" y="44" width="60" height="64" rx="6" fill="#F4F7FB" stroke="#5B6B80" stroke-width="2"/>
+  <rect x="28" y="54" width="18" height="10" rx="2" fill="#2F6FD1"/>
+  <rect x="54" y="54" width="18" height="22" rx="2" fill="#2F6FD1"/>
+  <rect x="28" y="69" width="18" height="6" rx="1" fill="#9AA8BA"/>
+  <rect x="30" y="84" width="40" height="14" rx="3" fill="#D6DEE8" stroke="#5B6B80" stroke-width="1.5"/>
+  <path d="M36 88 L64 88 M36 93 L64 93" stroke="#9AA8BA" stroke-width="1.5"/>
+  <path d="M40 108 L60 108 L63 121 L37 121 Z" fill="#C9D3DF" stroke="#5B6B80" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M18 46 A32 32 0 0 1 82 46 Z" fill="#DDE5EE" stroke="#5B6B80" stroke-width="2"/>
+  <rect x="20" y="39" width="60" height="4" fill="#2F6FD1" opacity="0.85"/>
+  <rect x="29" y="25" width="12" height="9" rx="2" fill="#2F6FD1"/>
+  <rect x="59" y="23" width="8" height="11" rx="2" fill="#2F6FD1"/>
+  <circle cx="50" cy="27" r="6" fill="#1A1F2B" stroke="#5B6B80" stroke-width="2"/>
+  <circle cx="48" cy="25" r="1.8" fill="#9FD4FF"/>
+  <circle cx="71" cy="35" r="2.5" fill="#E2483D"/>
+</svg>
