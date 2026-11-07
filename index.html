@@ -159,6 +159,126 @@
       }
     })();
   </script>
+  <script>
+    // Fokus-Protokoll (Fehlersuche): kleine Einblendung oben mit Fokus-,
+    // Zeiger- und Tastatur-Ereignissen. Ein/aus über die Anzeige-Einstellungen.
+    (function () {
+      var an = false, kasten = null, zeilen = [], start = Date.now();
+      function name(el) {
+        if (!el) return '-';
+        if (el.id === 'sb-tastatur-halter') return 'halter';
+        if (el.classList && el.classList.contains('flt-text-editing')) {
+          return el.tagName.toLowerCase() + '(' + (el.getAttribute('inputmode') || 'text') + ')';
+        }
+        return el.tagName ? el.tagName.toLowerCase() : String(el);
+      }
+      function log(text) {
+        if (!an) return;
+        zeilen.push(((Date.now() - start) % 100000) + ' ' + text);
+        if (zeilen.length > 14) zeilen.shift();
+        if (kasten) kasten.textContent = zeilen.join('\n');
+      }
+      window.sanbaseFokusLogEintrag = log;
+      window.sanbaseFokusLogAn = function () { return an; };
+      window.sanbaseFokusLog = function (neu) {
+        an = !!neu;
+        try { localStorage.setItem('sb_fokuslog', an ? '1' : '0'); } catch (e) {}
+        if (an && !kasten) {
+          kasten = document.createElement('div');
+          kasten.id = 'sb-fokuslog';
+          kasten.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0);left:0;' +
+            'right:0;z-index:2147483647;pointer-events:none;white-space:pre;' +
+            'font:10px/1.25 monospace;color:#fff;background:rgba(0,0,0,.7);padding:2px 4px;';
+          document.body.appendChild(kasten);
+          log('Protokoll an');
+        } else if (!an && kasten) {
+          kasten.remove();
+          kasten = null;
+          zeilen = [];
+        }
+      };
+      ['pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function (t) {
+        document.addEventListener(t, function (e) { log(t + ' ' + name(e.target)); }, true);
+      });
+      document.addEventListener('focusin', function (e) { log('focusin ' + name(e.target)); }, true);
+      document.addEventListener('focusout', function (e) {
+        log('focusout ' + name(e.target) + ' -> ' + name(e.relatedTarget));
+      }, true);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function () {
+          log('viewport h=' + Math.round(window.visualViewport.height));
+        });
+      }
+      try {
+        if (localStorage.getItem('sb_fokuslog') === '1') {
+          if (document.body) window.sanbaseFokusLog(true);
+          else document.addEventListener('DOMContentLoaded', function () { window.sanbaseFokusLog(true); });
+        }
+      } catch (e) {}
+    })();
+
+    // iOS: Flutter legt pro Textfeld ein eigenes verstecktes <input> an. Beim
+    // Wechsel nimmt die Engine dem alten Feld den Fokus, indem sie ihn kurz auf
+    // die Flutter-Ansicht legt – dann ist kein Eingabefeld fokussiert und iOS
+    // klappt die Tastatur zu. Ein unsichtbarer „Halter“ übernimmt in diesem
+    // Moment den Fokus, bis das neue Feld ihn holt (sonst gibt er ihn nach
+    // 300 ms ab und die Tastatur schließt wie gewohnt).
+    (function () {
+      try {
+        var ua = navigator.userAgent;
+        var ios = /iPad|iPhone|iPod/.test(ua) ||
+          (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+        if (!ios) return;
+        var log = function (t) { if (window.sanbaseFokusLogEintrag) window.sanbaseFokusLogEintrag(t); };
+        var halter = null, uhr = null;
+        var fokus = HTMLElement.prototype.focus;
+        function istFeld(el) {
+          return !!(el && el.classList && el.classList.contains('flt-text-editing'));
+        }
+        function holeHalter(ansicht) {
+          if (!halter) {
+            halter = document.createElement('input');
+            halter.id = 'sb-tastatur-halter';
+            halter.setAttribute('tabindex', '-1');
+            halter.setAttribute('aria-hidden', 'true');
+            halter.setAttribute('autocomplete', 'off');
+            halter.style.cssText = 'position:absolute;top:0;left:0;width:1px;' +
+              'height:1px;opacity:0;border:0;padding:0;margin:0;' +
+              'font-size:16px;caret-color:transparent;background:transparent;';
+          }
+          var host = ansicht.querySelector('flt-text-editing-host') || ansicht;
+          if (halter.parentNode !== host) host.appendChild(halter);
+          return halter;
+        }
+        HTMLElement.prototype.focus = function () {
+          try {
+            var alt = document.activeElement;
+            if (this.tagName === 'FLUTTER-VIEW' && istFeld(alt)) {
+              var h = holeHalter(this);
+              h.setAttribute('inputmode', alt.getAttribute('inputmode') || 'text');
+              fokus.call(h, { preventScroll: true });
+              if (document.activeElement === h) {
+                log('halter übernimmt');
+                if (uhr) clearTimeout(uhr);
+                uhr = setTimeout(function () {
+                  uhr = null;
+                  if (document.activeElement === halter) {
+                    log('halter gibt ab');
+                    halter.blur();
+                  }
+                }, 300);
+                return;
+              }
+            }
+          } catch (e) {}
+          return fokus.apply(this, arguments);
+        };
+        document.addEventListener('focusin', function (e) {
+          if (istFeld(e.target) && uhr) { clearTimeout(uhr); uhr = null; }
+        }, true);
+      } catch (e) {}
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
